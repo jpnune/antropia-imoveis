@@ -5,7 +5,8 @@ from app.db.database import engine, Base
 from app.api.endpoints import router as api_router
 
 # Inicializa e cria as tabelas locais se não existirem (SQLite/Postgres local)
-Base.metadata.create_all(bind=engine)
+if os.getenv('TESTING') != 'True':
+    Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title='Antropia Imoveis API')
 

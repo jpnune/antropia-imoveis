@@ -652,6 +652,95 @@ function App() {
             </div>
           )}
         </main>
+      ) : imovelSelecionado ? (
+        /* Detalhes do Imóvel e Formulário de Captura de Leads */
+        <main style={{ flex: 1, padding: '3rem 2rem', maxWidth: '1000px', margin: '0 auto', width: '100%' }}>
+          <button 
+            onClick={() => setImovelSelecionado(null)} 
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: 'transparent', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: '600', marginBottom: '2rem', fontSize: '1rem' }}
+          >
+            <ChevronLeft size={20} />
+            Voltar para a busca
+          </button>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '2rem' }}>
+            <div>
+              <img src={imovelSelecionado.imagem_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'} alt={imovelSelecionado.titulo} style={{ width: '100%', height: '400px', objectFit: 'cover', borderRadius: '12px', marginBottom: '1.5rem' }} />
+              <h2 style={{ fontSize: '2rem', color: 'var(--text)', marginBottom: '0.5rem', fontWeight: 'bold' }}>{imovelSelecionado.titulo}</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-light)', fontSize: '1rem', marginBottom: '1.5rem' }}>
+                <MapPin size={18} />
+                <span>{imovelSelecionado.bairro}, {imovelSelecionado.cidade}</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '2rem', padding: '1rem 0', margin: '1.5rem 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
+                  <BedDouble size={22} color="var(--primary)" />
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.8rem' }}>Quartos</span>
+                    <strong style={{ color: 'var(--text)' }}>{imovelSelecionado.quartos}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
+                  <Bath size={22} color="var(--primary)" />
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.8rem' }}>Banheiros</span>
+                    <strong style={{ color: 'var(--text)' }}>{imovelSelecionado.banheiros}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
+                  <Car size={22} color="var(--primary)" />
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.8rem' }}>Vagas</span>
+                    <strong style={{ color: 'var(--text)' }}>{imovelSelecionado.vagas}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)' }}>
+                  <Maximize size={22} color="var(--primary)" />
+                  <div>
+                    <span style={{ display: 'block', fontSize: '0.8rem' }}>Área</span>
+                    <strong style={{ color: 'var(--text)' }}>{imovelSelecionado.area} m²</strong>
+                  </div>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '1rem', color: 'var(--text)' }}>Descrição</h3>
+              <p style={{ color: 'var(--text)', lineHeight: '1.6', whiteSpace: 'pre-line' }}>{imovelSelecionado.descricao || 'Sem descrição adicional disponível.'}</p>
+            </div>
+
+            <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', height: 'fit-content', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+              <div style={{ color: 'var(--primary)', fontSize: '1.75rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+                {imovelSelecionado.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+              </div>
+
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: 'var(--text)' }}>Fale com um corretor</h3>
+
+              {leadEnviado ? (
+                <div style={{ backgroundColor: '#dcfce7', color: 'var(--success)', padding: '1rem', borderRadius: '6px', textAlign: 'center', fontWeight: '500' }}>
+                  Mensagem enviada com sucesso! Em breve entraremos em contato.
+                </div>
+              ) : (
+                <form onSubmit={handleEnviarLead} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div>
+                    <input type="text" required placeholder="Seu nome completo" value={leadNome} onChange={e => setLeadNome(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <input type="email" required placeholder="seu@email.com" value={leadEmail} onChange={e => setLeadEmail(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <input type="tel" required placeholder="(15) 99999-9999" value={leadTelefone} onChange={e => setLeadTelefone(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <textarea rows="4" required placeholder="Sua mensagem" value={leadMensagem} onChange={e => setLeadMensagem(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                  </div>
+                  <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <Send size={16} />
+                    Enviar Mensagem
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </main>
       ) : (
         /* Catálogo Geral (Busca de Imóveis) */
         <>
