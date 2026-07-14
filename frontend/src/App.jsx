@@ -44,6 +44,22 @@ function App() {
   const [novoImagemUrl, setNovoImagemUrl] = useState('');
   const [cadastroSucesso, setCadastroSucesso] = useState(false);
 
+  // Estados de Edição de Imóvel (CRUD)
+  const [imovelParaEditar, setImovelParaEditar] = useState(null);
+  const [editTitulo, setEditTitulo] = useState('');
+  const [editDescricao, setEditDescricao] = useState('');
+  const [editPreco, setEditPreco] = useState('');
+  const [editQuartos, setEditQuartos] = useState('');
+  const [editBanheiros, setEditBanheiros] = useState('');
+  const [editVagas, setEditVagas] = useState('');
+  const [editArea, setEditArea] = useState('');
+  const [editTipo, setEditTipo] = useState('Casa');
+  const [editCidade, setEditCidade] = useState('');
+  const [editBairro, setEditBairro] = useState('');
+  const [editImagemUrl, setEditImagemUrl] = useState('');
+  const [editStatus, setEditStatus] = useState('Disponivel');
+
+
   // Upload Local de Imagem
   const handleUploadLocal = (e) => {
     const file = e.target.files[0];
@@ -204,6 +220,82 @@ function App() {
     }
   };
 
+  const iniciarEdicao = (imovel) => {
+    setImovelParaEditar(imovel);
+    setEditTitulo(imovel.titulo);
+    setEditDescricao(imovel.descricao || '');
+    setEditPreco(imovel.preco);
+    setEditQuartos(imovel.quartos || '');
+    setEditBanheiros(imovel.banheiros || '');
+    setEditVagas(imovel.vagas || '');
+    setEditArea(imovel.area || '');
+    setEditTipo(imovel.tipo || 'Casa');
+    setEditCidade(imovel.cidade || '');
+    setEditBairro(imovel.bairro || '');
+    setEditImagemUrl(imovel.imagem_url || '');
+    setEditStatus(imovel.status || 'Disponivel');
+    setAbaAtiva('cadastrar'); // Reutiliza a aba de cadastro com layout de edição
+  };
+
+  const handleExcluirImovel = async (id) => {
+    if (window.confirm('Tem certeza que deseja excluir este imóvel?')) {
+      setImoveis(imoveis.filter(im => im.id !== id));
+      try {
+        await api.excluirImovel(id);
+      } catch (err) {
+        console.error('Falha ao excluir imovel do servidor:', err);
+      }
+    }
+  };
+
+  const handleSalvarEdicao = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        titulo: editTitulo,
+        descricao: editDescricao,
+        preco: parseFloat(editPreco),
+        quartos: parseInt(editQuartos) || 0,
+        banheiros: parseInt(editBanheiros) || 0,
+        vagas: parseInt(editVagas) || 0,
+        area: parseFloat(editArea) || 0.0,
+        tipo: editTipo,
+        cidade: editCidade,
+        bairro: editBairro,
+        imagem_url: editImagemUrl,
+        status: editStatus
+      };
+      
+      setImoveis(imoveis.map(im => im.id === imovelParaEditar.id ? { ...im, ...payload } : im));
+      
+      try {
+        await api.atualizarImovel(imovelParaEditar.id, payload);
+      } catch (err) {
+        console.warn('Erro ao atualizar no servidor, atualizado apenas localmente');
+      }
+
+      setImovelParaEditar(null);
+      setAbaAtiva('imoveis');
+    } catch (err) {
+      console.error('Falha ao salvar edição:', err);
+    }
+  };
+
+  const handleUploadLocalEdicao = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const LIMITE_5MB = 5 * 1024 * 1024;
+      if (file.size > LIMITE_5MB) {
+        alert('Erro: A imagem é muito grande. O limite é 5MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => setEditImagemUrl(reader.result);
+      reader.readAsDataURL(file);
+    }
+  };
+
+
   const handleLogout = () => {
     setCorretorLogado(null);
     setModoCorretor(false);
@@ -317,11 +409,18 @@ function App() {
               Gerenciar Leads (CRM)
             </button>
             <button 
-              onClick={() => setAbaAtiva('cadastrar')} 
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', backgroundColor: 'transparent', fontSize: '1.1rem', cursor: 'pointer', paddingBottom: '0.5rem', color: abaAtiva === 'cadastrar' ? 'var(--primary)' : 'var(--text-light)', borderBottom: abaAtiva === 'cadastrar' ? '2px solid var(--primary)' : 'none', fontWeight: abaAtiva === 'cadastrar' ? 'bold' : 'normal' }}
+              onClick={() => { setAbaAtiva('cadastrar'); setImovelParaEditar(null); }} 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', backgroundColor: 'transparent', fontSize: '1.1rem', cursor: 'pointer', paddingBottom: '0.5rem', color: abaAtiva === 'cadastrar' && !imovelParaEditar ? 'var(--primary)' : 'var(--text-light)', borderBottom: abaAtiva === 'cadastrar' && !imovelParaEditar ? '2px solid var(--primary)' : 'none', fontWeight: abaAtiva === 'cadastrar' && !imovelParaEditar ? 'bold' : 'normal' }}
             >
               <PlusCircle size={20} />
               Cadastrar Imóvel
+            </button>
+            <button 
+              onClick={() => { setAbaAtiva('imoveis'); setImovelParaEditar(null); }} 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', backgroundColor: 'transparent', fontSize: '1.1rem', cursor: 'pointer', paddingBottom: '0.5rem', color: abaAtiva === 'imoveis' || (abaAtiva === 'cadastrar' && imovelParaEditar) ? 'var(--primary)' : 'var(--text-light)', borderBottom: abaAtiva === 'imoveis' || (abaAtiva === 'cadastrar' && imovelParaEditar) ? '2px solid var(--primary)' : 'none', fontWeight: abaAtiva === 'imoveis' || (abaAtiva === 'cadastrar' && imovelParaEditar) ? 'bold' : 'normal' }}
+            >
+              <Search size={20} />
+              Meus Imóveis (CRUD)
             </button>
             <button 
               onClick={() => { setAbaAtiva('metricas'); carregarEstatisticas(); }} 
@@ -333,9 +432,9 @@ function App() {
           </div>
 
           {abaAtiva === 'cadastrar' ? (
-            /* Cadastro de Imóvel */
+            /* Cadastro ou Edição de Imóvel */
             <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', maxWidth: '800px', margin: '0 auto' }}>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Cadastrar Novo Imóvel</h3>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>{imovelParaEditar ? 'Editar Imóvel' : 'Cadastrar Novo Imóvel'}</h3>
 
               {cadastroSucesso && (
                 <div style={{ backgroundColor: '#dcfce7', color: 'var(--success)', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -344,25 +443,25 @@ function App() {
                 </div>
               )}
 
-              <form onSubmit={handleCadastrarImovel} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+              <form onSubmit={imovelParaEditar ? handleSalvarEdicao : handleCadastrarImovel} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Título do Imóvel</label>
-                  <input type="text" required value={novoTitulo} onChange={e => setNovoTitulo(e.target.value)} placeholder="Ex: Sobrado Moderno de Esquina" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="text" required value={imovelParaEditar ? editTitulo : novoTitulo} onChange={e => imovelParaEditar ? setEditTitulo(e.target.value) : setNovoTitulo(e.target.value)} placeholder="Ex: Sobrado Moderno de Esquina" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
                 
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Descrição do Imóvel</label>
-                  <textarea rows="4" value={novoDescricao} onChange={e => setNovoDescricao(e.target.value)} placeholder="Detalhes sobre acabamento, diferenciais..." style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                  <textarea rows="4" value={imovelParaEditar ? editDescricao : novoDescricao} onChange={e => imovelParaEditar ? setEditDescricao(e.target.value) : setNovoDescricao(e.target.value)} placeholder="Detalhes sobre acabamento, diferenciais..." style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Preço (R$)</label>
-                  <input type="number" required value={novoPreco} onChange={e => setNovoPreco(e.target.value)} placeholder="Ex: 850000" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="number" required value={imovelParaEditar ? editPreco : novoPreco} onChange={e => imovelParaEditar ? setEditPreco(e.target.value) : setNovoPreco(e.target.value)} placeholder="Ex: 850000" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Tipo do Imóvel</label>
-                  <select value={novoTipo} onChange={e => setNovoTipo(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', backgroundColor: '#fff' }}>
+                  <select value={imovelParaEditar ? editTipo : novoTipo} onChange={e => imovelParaEditar ? setEditTipo(e.target.value) : setNovoTipo(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', backgroundColor: '#fff' }}>
                     <option value="Casa">Casa</option>
                     <option value="Apartamento">Apartamento</option>
                   </select>
@@ -370,33 +469,44 @@ function App() {
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Quartos</label>
-                  <input type="number" value={novoQuartos} onChange={e => setNovoQuartos(e.target.value)} placeholder="Ex: 3" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="number" value={imovelParaEditar ? editQuartos : novoQuartos} onChange={e => imovelParaEditar ? setEditQuartos(e.target.value) : setNovoQuartos(e.target.value)} placeholder="Ex: 3" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Banheiros</label>
-                  <input type="number" value={novoBanheiros} onChange={e => setNovoBanheiros(e.target.value)} placeholder="Ex: 2" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="number" value={imovelParaEditar ? editBanheiros : novoBanheiros} onChange={e => imovelParaEditar ? setEditBanheiros(e.target.value) : setNovoBanheiros(e.target.value)} placeholder="Ex: 2" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Vagas de Garagem</label>
-                  <input type="number" value={novoVagas} onChange={e => setNovoVagas(e.target.value)} placeholder="Ex: 2" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="number" value={imovelParaEditar ? editVagas : novoVagas} onChange={e => imovelParaEditar ? setEditVagas(e.target.value) : setNovoVagas(e.target.value)} placeholder="Ex: 2" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Área Útil (m²)</label>
-                  <input type="number" value={novoArea} onChange={e => setNovoArea(e.target.value)} placeholder="Ex: 150" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="number" value={imovelParaEditar ? editArea : novoArea} onChange={e => imovelParaEditar ? setEditArea(e.target.value) : setNovoArea(e.target.value)} placeholder="Ex: 150" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Cidade</label>
-                  <input type="text" required value={novoCidade} onChange={e => setNovoCidade(e.target.value)} placeholder="Ex: Sorocaba" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="text" required value={imovelParaEditar ? editCidade : novoCidade} onChange={e => imovelParaEditar ? setEditCidade(e.target.value) : setNovoCidade(e.target.value)} placeholder="Ex: Sorocaba" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Bairro</label>
-                  <input type="text" required value={novoBairro} onChange={e => setNovoBairro(e.target.value)} placeholder="Ex: Campolim" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="text" required value={imovelParaEditar ? editBairro : novoBairro} onChange={e => imovelParaEditar ? setEditBairro(e.target.value) : setNovoBairro(e.target.value)} placeholder="Ex: Campolim" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
+
+                {imovelParaEditar && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Status do Imóvel</label>
+                    <select value={editStatus} onChange={e => setEditStatus(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', backgroundColor: '#fff' }}>
+                      <option value="Disponivel">Disponível</option>
+                      <option value="Vendido">Vendido</option>
+                      <option value="Alugado">Alugado</option>
+                    </select>
+                  </div>
+                )}
 
                 {/* Upload de Imagem ou Link */}
                 <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -405,20 +515,74 @@ function App() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#e2e8f0', color: 'var(--text)', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', border: '1px solid var(--border)', fontSize: '0.9rem' }}>
                       <Upload size={18} />
                       Carregar Computador
-                      <input type="file" accept="image/*" onChange={handleUploadLocal} style={{ display: 'none' }} />
+                      <input type="file" accept="image/*" onChange={imovelParaEditar ? handleUploadLocalEdicao : handleUploadLocal} style={{ display: 'none' }} />
                     </label>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>ou cole a URL da imagem abaixo</span>
                   </div>
                 </div>
 
                 <div style={{ gridColumn: 'span 2' }}>
-                  <input type="url" value={novoImagemUrl} onChange={e => setNovoImagemUrl(e.target.value)} placeholder="https://exemplo.com/foto.jpg (Preenchido automaticamente ao fazer upload)" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="url" value={imovelParaEditar ? editImagemUrl : novoImagemUrl} onChange={e => imovelParaEditar ? setEditImagemUrl(e.target.value) : setNovoImagemUrl(e.target.value)} placeholder="https://exemplo.com/foto.jpg" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
-                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                  <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem 2rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Salvar Imóvel</button>
+                <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                  {imovelParaEditar && (
+                    <button type="button" onClick={() => { setImovelParaEditar(null); setAbaAtiva('imoveis'); }} style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.75rem 2rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+                  )}
+                  <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem 2rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>{imovelParaEditar ? 'Salvar Alterações' : 'Salvar Imóvel'}</button>
                 </div>
               </form>
+            </div>
+          ) : abaAtiva === 'imoveis' ? (
+            /* Gerenciamento de Imóveis (Meus Imóveis CRUD) */
+            <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', maxWidth: '1000px', margin: '0 auto' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Gerenciar Meus Imóveis</h3>
+              <p style={{ color: 'var(--text-light)', marginBottom: '2rem' }}>Visualize, edite ou remova os imóveis atualmente cadastrados no portal.</p>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '2px solid var(--border)', color: 'var(--text-light)', fontSize: '0.9rem' }}>
+                      <th style={{ padding: '0.75rem 1rem' }}>Imagem</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Título</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Tipo</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Local</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Preço</th>
+                      <th style={{ padding: '0.75rem 1rem' }}>Status</th>
+                      <th style={{ padding: '0.75rem 1rem', textAlign: 'right' }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {imoveis.map(im => (
+                      <tr key={im.id} style={{ borderBottom: '1px solid var(--border)', fontSize: '0.95rem' }}>
+                        <td style={{ padding: '1rem' }}>
+                          <img src={im.imagem_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'} alt={im.titulo} style={{ width: '60px', height: '45px', objectFit: 'cover', borderRadius: '4px' }} />
+                        </td>
+                        <td style={{ padding: '1rem', fontWeight: '500' }}>{im.titulo}</td>
+                        <td style={{ padding: '1rem' }}>{im.tipo}</td>
+                        <td style={{ padding: '1rem', color: 'var(--text-light)' }}>{im.bairro}, {im.cidade}</td>
+                        <td style={{ padding: '1rem', fontWeight: 'bold' }}>{im.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+                        <td style={{ padding: '1rem' }}>
+                          <span style={{ 
+                            padding: '0.25rem 0.5rem', 
+                            borderRadius: '4px', 
+                            fontSize: '0.75rem', 
+                            fontWeight: 'bold',
+                            backgroundColor: im.status === 'Disponivel' ? '#dcfce7' : im.status === 'Vendido' ? '#fee2e2' : '#fef9c3',
+                            color: im.status === 'Disponivel' ? '#16a34a' : im.status === 'Vendido' ? '#dc2626' : '#ca8a04'
+                          }}>
+                            {im.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '1rem', textAlign: 'right' }}>
+                          <button onClick={() => iniciarEdicao(im)} style={{ backgroundColor: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer', marginRight: '0.5rem', fontSize: '0.85rem' }}>Editar</button>
+                          <button onClick={() => handleExcluirImovel(im.id)} style={{ backgroundColor: 'transparent', border: '1px solid #dc2626', color: '#dc2626', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>Excluir</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : abaAtiva === 'metricas' ? (
             /* Visualização de Métricas */

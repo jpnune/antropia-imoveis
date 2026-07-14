@@ -61,5 +61,21 @@ export const api = {
         const response = await fetch(`${API_URL}/estatisticas/`);
         if (!response.ok) throw new Error('Erro ao buscar estatísticas');
         return response.json();
+    },
+    async atualizarImovel(id, imovel) {
+        const response = await fetch(`${API_URL}/imoveis/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(imovel)
+        });
+        if (!response.ok) throw new Error('Erro ao atualizar imovel');
+        return response.json();
+    },
+    async excluirImovel(id) {
+        const response = await fetch(`${API_URL}/imoveis/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Erro ao excluir imovel');
+        return response.json();
     }
 };

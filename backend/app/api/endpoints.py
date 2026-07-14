@@ -123,4 +123,28 @@ def obter_estatisticas(db: Session = Depends(get_db)):
     resultado = db.query(models.VisualizacaoImovel).all()
     return [{'imovel_id': v.imovel_id, 'data': str(v.data), 'quantidade': v.quantidade} for v in resultado]
 
+# --- ENDPOINTS DE EDICÃO E EXCLUSÃO DE IMÓVEIS (CRUD CORRETOR) ---
+@router.put('/imoveis/{imovel_id}', response_model=schemas.ImovelResponse)
+def update_imovel(imovel_id: int, imovel_update: schemas.ImovelCreate, db: Session = Depends(get_db)):
+    db_imovel = db.query(models.Imovel).filter(models.Imovel.id == imovel_id).first()
+    if not db_imovel:
+        raise HTTPException(status_code=404, detail='Imovel nao encontrado')
+    for key, value in imovel_update.model_dump().items():
+        setattr(db_imovel, key, value)
+    db.commit()
+    db.refresh(db_imovel)
+    return db_imovel
+
+@router.delete('/imoveis/{imovel_id}', status_code=status.HTTP_200_OK)
+def delete_imovel(imovel_id: int, db: Session = Depends(get_db)):
+    db_imovel = db.query(models.Imovel).filter(models.Imovel.id == imovel_id).first()
+    if not db_imovel:
+        raise HTTPException(status_code=404, detail='Imovel nao encontrado')
+    # Remove dependências (visitas) antes
+    db.query(models.VisualizacaoImovel).filter(models.VisualizacaoImovel.imovel_id == imovel_id).delete()
+    db.delete(db_imovel)
+    db.commit()
+    return {'status': 'success', 'message': 'Imovel removido com sucesso'}
+
+
 
