@@ -48,6 +48,13 @@ function App() {
   const handleUploadLocal = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Limite de 5MB (5 * 1024 * 1024 bytes)
+      const LIMITE_5MB = 5 * 1024 * 1024;
+      if (file.size > LIMITE_5MB) {
+        alert('Erro: A imagem selecionada é muito grande. O limite máximo permitido é de 5MB.');
+        e.target.value = ''; // Reseta o input
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         // Converte a imagem local carregada em base64

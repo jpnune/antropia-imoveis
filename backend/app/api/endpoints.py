@@ -51,12 +51,53 @@ def update_lead_status(lead_id: int, status_funil: str, db: Session = Depends(ge
     return db_lead
 
 # --- ENDPOINTS DE AUTENTICAÇÃO SIMPLIFICADA (CORRETOR) ---
+import bcrypt
+
+def hash_password(password: str) -> str:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+    except Exception:
+        return False
+
+@router.post('/corretores/', response_model=schemas.CorretorResponse, status_code=status.HTTP_201_CREATED)
+def signup_corretor(corretor: schemas.CorretorCreate, db: Session = Depends(get_db)):
+    # Verifica se já existe o e-mail
+    db_existente = db.query(models.Corretor).filter(models.Corretor.email == corretor.email).first()
+    if db_existente:
+        raise HTTPException(status_code=400, detail='E-mail ja cadastrado')
+    
+    hashed = hash_password(corretor.senha)
+    db_corretor = models.Corretor(nome=corretor.nome, email=corretor.email, senha_hash=hashed)
+    db.add(db_corretor)
+    db.commit()
+    db.refresh(db_corretor)
+    return db_corretor
+
 @router.post('/login/')
 def login(corretor: schemas.CorretorCreate, db: Session = Depends(get_db)):
     db_corretor = db.query(models.Corretor).filter(models.Corretor.email == corretor.email).first()
-    if not db_corretor or db_corretor.senha_hash != corretor.senha: # Simplificado para demonstração inicial/portfólio
+    if not db_corretor:
         raise HTTPException(status_code=401, detail='E-mail ou senha incorretos')
+    
+    # Se for a senha semente de demonstração não hasheada ainda (migração/compatibilidade)
+    is_valid = False
+    if db_corretor.senha_hash == corretor.senha:
+        # Auto-converte para hash seguro
+        db_corretor.senha_hash = hash_password(corretor.senha)
+        db.commit()
+        is_valid = True
+    else:
+        is_valid = verify_password(corretor.senha, db_corretor.senha_hash)
+        
+    if not is_valid:
+        raise HTTPException(status_code=401, detail='E-mail ou senha incorretos')
+        
     return {'id': db_corretor.id, 'nome': db_corretor.nome, 'email': db_corretor.email}
+
 
 # --- ENDPOINTS DE ESTATÍSTICAS E VISUALIZAÇÕES ---
 @router.post('/imoveis/{imovel_id}/visitas/', status_code=status.HTTP_200_OK)
