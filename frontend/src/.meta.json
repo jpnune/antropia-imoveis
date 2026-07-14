@@ -1,0 +1,21 @@
+{
+  "componentName": "App",
+  "type": "Component",
+  "responsibilities": [
+    "Renderiza a interface principal do portal público e painel administrativo",
+    "Gerencia os estados globais de imóveis, leads e sessões de usuários",
+    "Integra com as funções do serviço de API para autenticação e CRUD"
+  ],
+  "dependencies": [
+    "src/services/api.ts",
+    "src/App.css",
+    "src/index.css"
+  ],
+  "securityConstraints": {
+    "requiresAuth": false,
+    "ipcSignals": []
+  },
+  "testSpecs": [
+    "src/App.test.tsx"
+  ]
+}

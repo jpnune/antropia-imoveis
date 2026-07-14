@@ -191,26 +191,11 @@ function App() {
     setLoginErro('');
     try {
       if (loginRole === 'corretor') {
-        if (loginEmail === 'corretor@antropia.com' && loginSenha === 'admin123') {
-          const mockUser: Corretor = { id: 1, nome: 'Corretor Demonstrativo', email: loginEmail };
-          setCorretorLogado(mockUser);
-          setModoCorretor(true);
-          setModoUsuario(false);
-          return;
-        }
         const user = await api.login(loginEmail, loginSenha);
         setCorretorLogado(user);
         setModoCorretor(true);
         setModoUsuario(false);
       } else {
-        if (loginEmail === 'usuario@antropia.com' && loginSenha === 'user123') {
-          const mockUser: Usuario = { id: 1, nome: 'Usuário Proprietário Demonstrativo', email: loginEmail };
-          setUsuarioLogado(mockUser);
-          setModoUsuario(true);
-          setModoCorretor(false);
-          setAbaAtiva('usuario-imoveis');
-          return;
-        }
         const user = await api.loginUsuario(loginEmail, loginSenha);
         setUsuarioLogado(user);
         setModoUsuario(true);
@@ -673,13 +658,7 @@ function App() {
                   </button>
                 </p>
 
-                <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-light)', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                  {loginRole === 'corretor' ? (
-                    <span>Dica portfólio: Use <strong>corretor@antropia.com</strong> e senha <strong>admin123</strong></span>
-                  ) : (
-                    <span>Dica portfólio: Use <strong>usuario@antropia.com</strong> e senha <strong>user123</strong></span>
-                  )}
-                </div>
+                {/* Dicas de credenciais removidas por segurança */}
               </>
             )}
           </div>
