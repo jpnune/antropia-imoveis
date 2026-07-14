@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, BedDouble, Bath, Car, Maximize, Phone, Mail, ChevronLeft, Send, CheckCircle, Lock, ClipboardList, PlusCircle, LogOut, BarChart3 } from 'lucide-react';
+import { Search, MapPin, BedDouble, Bath, Car, Maximize, Phone, Mail, ChevronLeft, Send, CheckCircle, Lock, ClipboardList, PlusCircle, LogOut, BarChart3, Upload } from 'lucide-react';
 import { api } from './services/api';
 
 const STATUS_COLUNAS = ['Novo', 'Contatado', 'Visita Agendada', 'Fechado'];
@@ -16,7 +16,7 @@ function App() {
   // Controle do Modo (Público vs Corretor)
   const [modoCorretor, setModoCorretor] = useState(false);
   const [corretorLogado, setCorretorLogado] = useState(null);
-  const [abaAtiva, setAbaAtiva] = useState('leads'); // 'leads' | 'cadastrar' | 'metricas'
+  const [abaAtiva, setAbaAtiva] = useState('leads');
 
   // Estados do Formulário de Login
   const [loginEmail, setLoginEmail] = useState('');
@@ -43,6 +43,19 @@ function App() {
   const [novoBairro, setNovoBairro] = useState('');
   const [novoImagemUrl, setNovoImagemUrl] = useState('');
   const [cadastroSucesso, setCadastroSucesso] = useState(false);
+
+  // Upload Local de Imagem
+  const handleUploadLocal = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        // Converte a imagem local carregada em base64
+        setNovoImagemUrl(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const carregarImoveis = () => {
     api.getImoveis()
@@ -192,12 +205,9 @@ function App() {
   const abrirDetalhes = (imovel) => {
     setImovelSelecionado(imovel);
     setLeadEnviado(false);
-    
-    // Registra silenciosamente a visita
     api.registrarVisita(imovel.id).catch(err => console.warn('Falha ao gravar estatística de acesso:', err));
   };
 
-  // Cálculo das visitas consolidadas para os gráficos
   const obterVisitasPorImovel = (imovelId) => {
     return estatisticas
       .filter(stat => stat.imovel_id === imovelId)
@@ -381,9 +391,21 @@ function App() {
                   <input type="text" required value={novoBairro} onChange={e => setNovoBairro(e.target.value)} placeholder="Ex: Campolim" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
+                {/* Upload de Imagem ou Link */}
+                <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500' }}>Foto do Imóvel</label>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#e2e8f0', color: 'var(--text)', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: '500', border: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                      <Upload size={18} />
+                      Carregar Computador
+                      <input type="file" accept="image/*" onChange={handleUploadLocal} style={{ display: 'none' }} />
+                    </label>
+                    <span style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>ou cole a URL da imagem abaixo</span>
+                  </div>
+                </div>
+
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>URL da Imagem</label>
-                  <input type="url" value={novoImagemUrl} onChange={e => setNovoImagemUrl(e.target.value)} placeholder="https://exemplo.com/foto.jpg" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  <input type="url" value={novoImagemUrl} onChange={e => setNovoImagemUrl(e.target.value)} placeholder="https://exemplo.com/foto.jpg (Preenchido automaticamente ao fazer upload)" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                 </div>
 
                 <div style={{ gridColumn: 'span 2', display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
@@ -392,7 +414,7 @@ function App() {
               </form>
             </div>
           ) : abaAtiva === 'metricas' ? (
-            /* Visualização de Métricas / Gráficos de Acessos */
+            /* Visualização de Métricas */
             <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', maxWidth: '1000px', margin: '0 auto' }}>
               <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>Estatísticas de Acesso</h3>
               <p style={{ color: 'var(--text-light)', marginBottom: '2rem' }}>Monitore a quantidade de visitas que cada imóvel obteve de potenciais clientes no site.</p>
@@ -400,7 +422,6 @@ function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 {imoveis.map(imovel => {
                   const totalVisitas = obterVisitasPorImovel(imovel.id);
-                  // Largura em porcentagem simulando a barra de gráfico de barras com limite máximo
                   const maxVisitas = Math.max(...imoveis.map(im => obterVisitasPorImovel(im.id)), 1);
                   const porcentagemBarra = (totalVisitas / maxVisitas) * 100;
 
