@@ -495,18 +495,24 @@ function App() {
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <button 
               onClick={() => { setModoCorretor(true); setModoUsuario(false); setLoginRole('corretor'); setIsSignUp(false); }} 
-              style={{ backgroundColor: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+              style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', fontSize: '0.85rem' }}
             >
-              Acesso Corretor
+              Login Corretor
             </button>
             <button 
               onClick={() => { setModoUsuario(true); setModoCorretor(false); setLoginRole('usuario'); setIsSignUp(false); }} 
-              style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+              style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', fontSize: '0.85rem' }}
             >
-              Acesso Proprietário
+              Login Proprietário
+            </button>
+            <button 
+              onClick={() => { setModoUsuario(true); setModoCorretor(false); setSignupRole('usuario'); setIsSignUp(true); }} 
+              style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem' }}
+            >
+              Cadastre-se
             </button>
           </div>
         )}
