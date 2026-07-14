@@ -500,13 +500,7 @@ function App() {
               onClick={() => { setModoCorretor(true); setModoUsuario(false); setLoginRole('corretor'); setIsSignUp(false); }} 
               style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', fontSize: '0.85rem' }}
             >
-              Login Corretor
-            </button>
-            <button 
-              onClick={() => { setModoUsuario(true); setModoCorretor(false); setLoginRole('usuario'); setIsSignUp(false); }} 
-              style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500', fontSize: '0.85rem' }}
-            >
-              Login Proprietário
+              Login
             </button>
             <button 
               onClick={() => { setModoUsuario(true); setModoCorretor(false); setSignupRole('usuario'); setIsSignUp(true); }} 
