@@ -157,5 +157,29 @@ def delete_imovel(imovel_id: int, db: Session = Depends(get_db)):
     db.commit()
     return {'status': 'success', 'message': 'Imovel removido com sucesso'}
 
+@router.get('/corretores/', response_model=List[schemas.CorretorResponse])
+def list_corretores(db: Session = Depends(get_db)):
+    return db.query(models.Corretor).all()
+
+@router.post('/usuarios/', response_model=schemas.UsuarioResponse, status_code=status.HTTP_201_CREATED)
+def signup_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+    db_existente = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
+    if db_existente:
+        raise HTTPException(status_code=400, detail='E-mail ja cadastrado')
+    hashed = hash_password(usuario.senha)
+    db_usuario = models.Usuario(nome=usuario.nome, email=usuario.email, senha_hash=hashed)
+    db.add(db_usuario)
+    db.commit()
+    db.refresh(db_usuario)
+    return db_usuario
+
+@router.post('/login/usuario/')
+def login_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+    db_usuario = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
+    if not db_usuario or not verify_password(usuario.senha, db_usuario.senha_hash):
+        raise HTTPException(status_code=401, detail='E-mail ou senha incorretos')
+    return {'id': db_usuario.id, 'nome': db_usuario.nome, 'email': db_usuario.email}
+
+
 
 

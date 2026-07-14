@@ -12,6 +12,15 @@ class Corretor(Base):
 
     leads = relationship('Lead', back_populates='corretor')
 
+class Usuario(Base):
+    __tablename__ = 'usuarios'
+    id = Column(Integer, primary_key=True, index=True)
+    nome = Column(String, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    senha_hash = Column(String, nullable=False)
+
+    imoveis = relationship('Imovel', back_populates='usuario')
+
 class Imovel(Base):
     __tablename__ = 'imoveis'
     id = Column(Integer, primary_key=True, index=True)
@@ -27,8 +36,12 @@ class Imovel(Base):
     bairro = Column(String)
     status = Column(String, default='Disponivel')  # Disponivel, Vendido, Alugado
     imagem_url = Column(String)
+    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True)
+    corretor_preferido_id = Column(Integer, ForeignKey('corretores.id'), nullable=True)
 
     visitas = relationship('VisualizacaoImovel', back_populates='imovel')
+    usuario = relationship('Usuario', back_populates='imoveis')
+    corretor_preferido = relationship('Corretor')
 
 class Lead(Base):
     __tablename__ = 'leads'

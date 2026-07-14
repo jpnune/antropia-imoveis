@@ -1,92 +1,100 @@
 import React, { useState, useEffect } from 'react';
 import { Search, MapPin, BedDouble, Bath, Car, Maximize, Phone, Mail, ChevronLeft, Send, CheckCircle, Lock, ClipboardList, PlusCircle, LogOut, BarChart3, Upload } from 'lucide-react';
-import { api } from './services/api';
+import { api, Imovel, Lead, Corretor, Usuario, Estatistica } from './services/api';
 
 const STATUS_COLUNAS = ['Novo', 'Contatado', 'Visita Agendada', 'Fechado'];
 
 function App() {
-  const [imoveis, setImoveis] = useState([]);
-  const [leads, setLeads] = useState([]);
-  const [estatisticas, setEstatisticas] = useState([]);
-  const [busca, setBusca] = useState('');
-  const [tipo, setTipo] = useState('');
-  const [maxPreco, setMaxPreco] = useState('');
-  const [minQuartos, setMinQuartos] = useState('');
-  const [imovelSelecionado, setImovelSelecionado] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [imoveis, setImoveis] = useState<Imovel[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [estatisticas, setEstatisticas] = useState<Estatistica[]>([]);
+  const [busca, setBusca] = useState<string>('');
+  const [tipo, setTipo] = useState<string>('');
+  const [maxPreco, setMaxPreco] = useState<string>('');
+  const [minQuartos, setMinQuartos] = useState<string | number>('');
+  const [imovelSelecionado, setImovelSelecionado] = useState<Imovel | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
 
   // Controle do Modo (Público vs Corretor)
-  const [modoCorretor, setModoCorretor] = useState(false);
-  const [corretorLogado, setCorretorLogado] = useState(null);
-  const [abaAtiva, setAbaAtiva] = useState('leads');
+  const [modoCorretor, setModoCorretor] = useState<boolean>(false);
+  const [corretorLogado, setCorretorLogado] = useState<Corretor | null>(null);
+  const [usuarioLogado, setUsuarioLogado] = useState<Usuario | null>(null);
+  const [modoUsuario, setModoUsuario] = useState<boolean>(false);
+  const [abaAtiva, setAbaAtiva] = useState<string>('leads');
 
-  // Estados do Formulário de Login
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginSenha, setLoginSenha] = useState('');
-  const [loginErro, setLoginErro] = useState('');
+  // Estados do Formulário de Login / Inscrição
+  const [loginEmail, setLoginEmail] = useState<string>('');
+  const [loginSenha, setLoginSenha] = useState<string>('');
+  const [loginErro, setLoginErro] = useState<string>('');
+  const [loginRole, setLoginRole] = useState<string>('corretor'); // 'corretor' ou 'usuario'
+  const [isSignUp, setIsSignUp] = useState<boolean>(false);
+  const [signupNome, setSignupNome] = useState<string>('');
+  const [signupEmail, setSignupEmail] = useState<string>('');
+  const [signupSenha, setSignupSenha] = useState<string>('');
+  const [signupRole, setSignupRole] = useState<string>('corretor'); // 'corretor' ou 'usuario'
+
+  // Lista de Corretores cadastrados
+  const [corretores, setCorretores] = useState<Corretor[]>([]);
+  const [corretorPreferidoId, setCorretorPreferidoId] = useState<string>('');
 
   // Estados do formulário de Lead (Área Pública)
-  const [leadNome, setLeadNome] = useState('');
-  const [leadEmail, setLeadEmail] = useState('');
-  const [leadTelefone, setLeadTelefone] = useState('');
-  const [leadMensagem, setLeadMensagem] = useState('Tenho interesse neste imóvel. Gostaria de receber mais informações.');
-  const [leadEnviado, setLeadEnviado] = useState(false);
+  const [leadNome, setLeadNome] = useState<string>('');
+  const [leadEmail, setLeadEmail] = useState<string>('');
+  const [leadTelefone, setLeadTelefone] = useState<string>('');
+  const [leadMensagem, setLeadMensagem] = useState<string>('Tenho interesse neste imóvel. Gostaria de receber mais informações.');
+  const [leadEnviado, setLeadEnviado] = useState<boolean>(false);
 
   // Estados do cadastro de imóvel
-  const [novoTitulo, setNovoTitulo] = useState('');
-  const [novoDescricao, setNovoDescricao] = useState('');
-  const [novoPreco, setNovoPreco] = useState('');
-  const [novoQuartos, setNovoQuartos] = useState('');
-  const [novoBanheiros, setNovoBanheiros] = useState('');
-  const [novoVagas, setNovoVagas] = useState('');
-  const [novoArea, setNovoArea] = useState('');
-  const [novoTipo, setNovoTipo] = useState('Casa');
-  const [novoCidade, setNovoCidade] = useState('');
-  const [novoBairro, setNovoBairro] = useState('');
-  const [novoImagemUrl, setNovoImagemUrl] = useState('');
-  const [cadastroSucesso, setCadastroSucesso] = useState(false);
+  const [novoTitulo, setNovoTitulo] = useState<string>('');
+  const [novoDescricao, setNovoDescricao] = useState<string>('');
+  const [novoPreco, setNovoPreco] = useState<string>('');
+  const [novoQuartos, setNovoQuartos] = useState<string>('');
+  const [novoBanheiros, setNovoBanheiros] = useState<string>('');
+  const [novoVagas, setNovoVagas] = useState<string>('');
+  const [novoArea, setNovoArea] = useState<string>('');
+  const [novoTipo, setNovoTipo] = useState<string>('Casa');
+  const [novoCidade, setNovoCidade] = useState<string>('');
+  const [novoBairro, setNovoBairro] = useState<string>('');
+  const [novoImagemUrl, setNovoImagemUrl] = useState<string>('');
+  const [cadastroSucesso, setCadastroSucesso] = useState<boolean>(false);
 
   // Estados de Edição de Imóvel (CRUD)
-  const [imovelParaEditar, setImovelParaEditar] = useState(null);
-  const [editTitulo, setEditTitulo] = useState('');
-  const [editDescricao, setEditDescricao] = useState('');
-  const [editPreco, setEditPreco] = useState('');
-  const [editQuartos, setEditQuartos] = useState('');
-  const [editBanheiros, setEditBanheiros] = useState('');
-  const [editVagas, setEditVagas] = useState('');
-  const [editArea, setEditArea] = useState('');
-  const [editTipo, setEditTipo] = useState('Casa');
-  const [editCidade, setEditCidade] = useState('');
-  const [editBairro, setEditBairro] = useState('');
-  const [editImagemUrl, setEditImagemUrl] = useState('');
-  const [editStatus, setEditStatus] = useState('Disponivel');
+  const [imovelParaEditar, setImovelParaEditar] = useState<Imovel | null>(null);
+  const [editTitulo, setEditTitulo] = useState<string>('');
+  const [editDescricao, setEditDescricao] = useState<string>('');
+  const [editPreco, setEditPreco] = useState<number | string>('');
+  const [editQuartos, setEditQuartos] = useState<number | string>('');
+  const [editBanheiros, setEditBanheiros] = useState<number | string>('');
+  const [editVagas, setEditVagas] = useState<number | string>('');
+  const [editArea, setEditArea] = useState<number | string>('');
+  const [editTipo, setEditTipo] = useState<string>('Casa');
+  const [editCidade, setEditCidade] = useState<string>('');
+  const [editBairro, setEditBairro] = useState<string>('');
+  const [editImagemUrl, setEditImagemUrl] = useState<string>('');
+  const [editStatus, setEditStatus] = useState<string>('Disponivel');
 
   // Estados de Gerenciamento de Leads (CRUD)
-  const [leadParaEditar, setLeadParaEditar] = useState(null);
-  const [abrirModalLead, setAbrirModalLead] = useState(false);
-  const [leadFormNome, setLeadFormNome] = useState('');
-  const [leadFormEmail, setLeadFormEmail] = useState('');
-  const [leadFormTelefone, setLeadFormTelefone] = useState('');
-  const [leadFormMensagem, setLeadFormMensagem] = useState('');
-  const [leadFormStatus, setLeadFormStatus] = useState('Novo');
-
-
+  const [leadParaEditar, setLeadParaEditar] = useState<Lead | null>(null);
+  const [abrirModalLead, setAbrirModalLead] = useState<boolean>(false);
+  const [leadFormNome, setLeadFormNome] = useState<string>('');
+  const [leadFormEmail, setLeadFormEmail] = useState<string>('');
+  const [leadFormTelefone, setLeadFormTelefone] = useState<string>('');
+  const [leadFormMensagem, setLeadFormMensagem] = useState<string>('');
+  const [leadFormStatus, setLeadFormStatus] = useState<string>('Novo');
 
   // Upload Local de Imagem
-  const handleUploadLocal = (e) => {
-    const file = e.target.files[0];
+  const handleUploadLocal = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
-      // Limite de 5MB (5 * 1024 * 1024 bytes)
       const LIMITE_5MB = 5 * 1024 * 1024;
       if (file.size > LIMITE_5MB) {
         alert('Erro: A imagem selecionada é muito grande. O limite máximo permitido é de 5MB.');
-        e.target.value = ''; // Reseta o input
+        e.target.value = '';
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        // Converte a imagem local carregada em base64
-        setNovoImagemUrl(reader.result);
+        setNovoImagemUrl(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
@@ -116,8 +124,15 @@ function App() {
       .catch(err => console.error('Erro ao carregar estatísticas:', err));
   };
 
+  const carregarCorretores = () => {
+    api.getCorretores()
+      .then(data => setCorretores(data))
+      .catch(err => console.error('Erro ao carregar corretores:', err));
+  };
+
   useEffect(() => {
     carregarImoveis();
+    carregarCorretores();
   }, []);
 
   useEffect(() => {
@@ -127,17 +142,23 @@ function App() {
     }
   }, [corretorLogado]);
 
+  useEffect(() => {
+    if (usuarioLogado) {
+      carregarCorretores();
+    }
+  }, [usuarioLogado]);
+
   const filtrados = imoveis.filter(imovel => {
     const matchBusca = imovel.titulo.toLowerCase().includes(busca.toLowerCase()) ||
-                       imovel.bairro.toLowerCase().includes(busca.toLowerCase()) ||
-                       imovel.cidade.toLowerCase().includes(busca.toLowerCase());
+                       (imovel.bairro || '').toLowerCase().includes(busca.toLowerCase()) ||
+                       (imovel.cidade || '').toLowerCase().includes(busca.toLowerCase());
     const matchTipo = tipo === '' || imovel.tipo === tipo;
     const matchPreco = maxPreco === '' || imovel.preco <= parseFloat(maxPreco);
-    const matchQuartos = minQuartos === '' || imovel.quartos >= minQuartos;
+    const matchQuartos = minQuartos === '' || (imovel.quartos || 0) >= (typeof minQuartos === 'string' ? parseInt(minQuartos) : minQuartos);
     return matchBusca && matchTipo && matchPreco && matchQuartos;
   });
 
-  const handleEnviarLead = async (e) => {
+  const handleEnviarLead = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       const payload = {
@@ -147,7 +168,7 @@ function App() {
         mensagem: leadMensagem,
         status_funil: 'Novo'
       };
-      const mockNewLead = { ...payload, id: Date.now(), criado_em: new Date().toISOString() };
+      const mockNewLead: Lead = { ...payload, id: Date.now(), criado_em: new Date().toISOString() };
       setLeads([...leads, mockNewLead]);
       
       try {
@@ -165,23 +186,68 @@ function App() {
     }
   };
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginErro('');
     try {
-      if (loginEmail === 'corretor@antropia.com' && loginSenha === 'admin123') {
-        const mockUser = { id: 1, nome: 'Corretor Demonstrativo', email: loginEmail };
-        setCorretorLogado(mockUser);
-        return;
+      if (loginRole === 'corretor') {
+        if (loginEmail === 'corretor@antropia.com' && loginSenha === 'admin123') {
+          const mockUser: Corretor = { id: 1, nome: 'Corretor Demonstrativo', email: loginEmail };
+          setCorretorLogado(mockUser);
+          setModoCorretor(true);
+          setModoUsuario(false);
+          return;
+        }
+        const user = await api.login(loginEmail, loginSenha);
+        setCorretorLogado(user);
+        setModoCorretor(true);
+        setModoUsuario(false);
+      } else {
+        if (loginEmail === 'usuario@antropia.com' && loginSenha === 'user123') {
+          const mockUser: Usuario = { id: 1, nome: 'Usuário Proprietário Demonstrativo', email: loginEmail };
+          setUsuarioLogado(mockUser);
+          setModoUsuario(true);
+          setModoCorretor(false);
+          setAbaAtiva('usuario-imoveis');
+          return;
+        }
+        const user = await api.loginUsuario(loginEmail, loginSenha);
+        setUsuarioLogado(user);
+        setModoUsuario(true);
+        setModoCorretor(false);
+        setAbaAtiva('usuario-imoveis');
       }
-      const user = await api.login(loginEmail, loginSenha);
-      setCorretorLogado(user);
     } catch (err) {
       setLoginErro('E-mail ou senha incorretos.');
     }
   };
 
-  const handleMudarStatusLead = async (leadId, novoStatus) => {
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginErro('');
+    try {
+      if (signupRole === 'corretor') {
+        const user = await api.cadastrarCorretor(signupNome, signupEmail, signupSenha);
+        setCorretorLogado(user);
+        setModoCorretor(true);
+        setModoUsuario(false);
+      } else {
+        const user = await api.cadastrarUsuario(signupNome, signupEmail, signupSenha);
+        setUsuarioLogado(user);
+        setModoUsuario(true);
+        setModoCorretor(false);
+        setAbaAtiva('usuario-imoveis');
+      }
+      setIsSignUp(false);
+      setSignupNome('');
+      setSignupEmail('');
+      setSignupSenha('');
+    } catch (err) {
+      setLoginErro('Falha no cadastro. Verifique os dados ou se o e-mail já existe.');
+    }
+  };
+
+  const handleMudarStatusLead = async (leadId: number, novoStatus: string) => {
     const lead = leads.find(l => l.id === leadId);
     if (!lead) return;
     const updatedLead = { ...lead, status_funil: novoStatus };
@@ -203,17 +269,17 @@ function App() {
     setAbrirModalLead(true);
   };
 
-  const iniciarEdicaoLead = (lead) => {
+  const iniciarEdicaoLead = (lead: Lead) => {
     setLeadParaEditar(lead);
     setLeadFormNome(lead.nome);
     setLeadFormEmail(lead.email);
-    setLeadFormTelefone(lead.telefone);
-    setLeadFormMensagem(lead.mensagem);
-    setLeadFormStatus(lead.status_funil);
+    setLeadFormTelefone(lead.telefone || '');
+    setLeadFormMensagem(lead.mensagem || '');
+    setLeadFormStatus(lead.status_funil || 'Novo');
     setAbrirModalLead(true);
   };
 
-  const handleExcluirLead = async (id) => {
+  const handleExcluirLead = async (id: number) => {
     if (window.confirm('Deseja realmente remover este lead?')) {
       setLeads(leads.filter(l => l.id !== id));
       try {
@@ -224,7 +290,7 @@ function App() {
     }
   };
 
-  const handleSalvarLead = async (e) => {
+  const handleSalvarLead = async (e: React.FormEvent) => {
     e.preventDefault();
     const payload = {
       nome: leadFormNome,
@@ -234,8 +300,7 @@ function App() {
       status_funil: leadFormStatus
     };
 
-    if (leadParaEditar) {
-      // Editar
+    if (leadParaEditar && leadParaEditar.id) {
       setLeads(leads.map(l => l.id === leadParaEditar.id ? { ...l, ...payload } : l));
       try {
         await api.atualizarLead(leadParaEditar.id, payload);
@@ -243,8 +308,7 @@ function App() {
         console.error('Erro ao editar lead no servidor:', err);
       }
     } else {
-      // Criar
-      const mockLead = { ...payload, id: Date.now(), criado_em: new Date().toISOString() };
+      const mockLead: Lead = { ...payload, id: Date.now(), criado_em: new Date().toISOString() };
       setLeads([...leads, mockLead]);
       try {
         await api.enviarLead(payload);
@@ -255,10 +319,10 @@ function App() {
     setAbrirModalLead(false);
   };
 
-  const handleCadastrarImovel = async (e) => {
+  const handleCadastrarImovel = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const payload = {
+      const payload: Imovel = {
         titulo: novoTitulo,
         descricao: novoDescricao,
         preco: parseFloat(novoPreco),
@@ -270,7 +334,9 @@ function App() {
         cidade: novoCidade,
         bairro: novoBairro,
         imagem_url: novoImagemUrl || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80',
-        status: 'Disponivel'
+        status: 'Disponivel',
+        usuario_id: usuarioLogado ? usuarioLogado.id : null,
+        corretor_preferido_id: (usuarioLogado && corretorPreferidoId) ? parseInt(corretorPreferidoId) : null
       };
       
       setImoveis([...imoveis, { ...payload, id: Date.now() }]);
@@ -299,7 +365,7 @@ function App() {
     }
   };
 
-  const iniciarEdicao = (imovel) => {
+  const iniciarEdicao = (imovel: Imovel) => {
     setImovelParaEditar(imovel);
     setEditTitulo(imovel.titulo);
     setEditDescricao(imovel.descricao || '');
@@ -313,10 +379,10 @@ function App() {
     setEditBairro(imovel.bairro || '');
     setEditImagemUrl(imovel.imagem_url || '');
     setEditStatus(imovel.status || 'Disponivel');
-    setAbaAtiva('cadastrar'); // Reutiliza a aba de cadastro com layout de edição
+    setAbaAtiva('cadastrar');
   };
 
-  const handleExcluirImovel = async (id) => {
+  const handleExcluirImovel = async (id: number) => {
     if (window.confirm('Tem certeza que deseja excluir este imóvel?')) {
       setImoveis(imoveis.filter(im => im.id !== id));
       try {
@@ -327,22 +393,25 @@ function App() {
     }
   };
 
-  const handleSalvarEdicao = async (e) => {
+  const handleSalvarEdicao = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!imovelParaEditar || !imovelParaEditar.id) return;
     try {
-      const payload = {
+      const payload: Imovel = {
         titulo: editTitulo,
         descricao: editDescricao,
-        preco: parseFloat(editPreco),
-        quartos: parseInt(editQuartos) || 0,
-        banheiros: parseInt(editBanheiros) || 0,
-        vagas: parseInt(editVagas) || 0,
-        area: parseFloat(editArea) || 0.0,
+        preco: parseFloat(editPreco as string),
+        quartos: parseInt(editQuartos as string) || 0,
+        banheiros: parseInt(editBanheiros as string) || 0,
+        vagas: parseInt(editVagas as string) || 0,
+        area: parseFloat(editArea as string) || 0.0,
         tipo: editTipo,
         cidade: editCidade,
         bairro: editBairro,
         imagem_url: editImagemUrl,
-        status: editStatus
+        status: editStatus,
+        usuario_id: imovelParaEditar.usuario_id || null,
+        corretor_preferido_id: imovelParaEditar.corretor_preferido_id || null
       };
       
       setImoveis(imoveis.map(im => im.id === imovelParaEditar.id ? { ...im, ...payload } : im));
@@ -354,14 +423,14 @@ function App() {
       }
 
       setImovelParaEditar(null);
-      setAbaAtiva('imoveis');
+      setAbaAtiva(usuarioLogado ? 'usuario-imoveis' : 'imoveis');
     } catch (err) {
       console.error('Falha ao salvar edição:', err);
     }
   };
 
-  const handleUploadLocalEdicao = (e) => {
-    const file = e.target.files[0];
+  const handleUploadLocalEdicao = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const LIMITE_5MB = 5 * 1024 * 1024;
       if (file.size > LIMITE_5MB) {
@@ -369,24 +438,28 @@ function App() {
         return;
       }
       const reader = new FileReader();
-      reader.onloadend = () => setEditImagemUrl(reader.result);
+      reader.onloadend = () => setEditImagemUrl(reader.result as string);
       reader.readAsDataURL(file);
     }
   };
 
-
   const handleLogout = () => {
     setCorretorLogado(null);
+    setUsuarioLogado(null);
     setModoCorretor(false);
+    setModoUsuario(false);
   };
 
-  const abrirDetalhes = (imovel) => {
+  const abrirDetalhes = (imovel: Imovel) => {
     setImovelSelecionado(imovel);
     setLeadEnviado(false);
-    api.registrarVisita(imovel.id).catch(err => console.warn('Falha ao gravar estatística de acesso:', err));
+    if (imovel.id) {
+        api.registrarVisita(imovel.id).catch(err => console.warn('Falha ao gravar estatística de acesso:', err));
+    }
   };
 
-  const obterVisitasPorImovel = (imovelId) => {
+  const obterVisitasPorImovel = (imovelId?: number) => {
+    if (!imovelId) return 0;
     return estatisticas
       .filter(stat => stat.imovel_id === imovelId)
       .reduce((acc, curr) => acc + curr.quantidade, 0);
@@ -396,17 +469,25 @@ function App() {
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Top Header */}
       <header style={{ backgroundColor: 'var(--surface)', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border)' }}>
-        <h1 style={{ color: 'var(--primary)', fontSize: '1.5rem', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => { setImovelSelecionado(null); setModoCorretor(false); }}>
+        <h1 style={{ color: 'var(--primary)', fontSize: '1.5rem', fontWeight: 'bold', cursor: 'pointer' }} onClick={() => { setImovelSelecionado(null); setModoCorretor(false); setModoUsuario(false); }}>
           Antropia Imóveis
         </h1>
-        {corretorLogado ? (
+        {corretorLogado || usuarioLogado ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <span style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>Olá, <strong>{corretorLogado.nome}</strong></span>
+            <span style={{ fontSize: '0.9rem', color: 'var(--text-light)' }}>Olá, <strong>{corretorLogado ? corretorLogado.nome : usuarioLogado?.nome}</strong> ({corretorLogado ? 'Corretor' : 'Proprietário'})</span>
             <button 
-              onClick={() => setModoCorretor(!modoCorretor)} 
+              onClick={() => {
+                if (corretorLogado) {
+                  setModoCorretor(!modoCorretor);
+                  setModoUsuario(false);
+                } else {
+                  setModoUsuario(!modoUsuario);
+                  setModoCorretor(false);
+                }
+              }} 
               style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
             >
-              {modoCorretor ? 'Ver Site Público' : 'Ir para o Painel'}
+              {modoCorretor || modoUsuario ? 'Ver Site Público' : 'Ir para o Painel'}
             </button>
             <button onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', backgroundColor: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer' }}>
               <LogOut size={18} />
@@ -414,66 +495,193 @@ function App() {
             </button>
           </div>
         ) : (
-          <button 
-            onClick={() => setModoCorretor(true)} 
-            style={{ backgroundColor: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
-          >
-            Acesso Corretor
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button 
+              onClick={() => { setModoCorretor(true); setModoUsuario(false); setLoginRole('corretor'); setIsSignUp(false); }} 
+              style={{ backgroundColor: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+            >
+              Acesso Corretor
+            </button>
+            <button 
+              onClick={() => { setModoUsuario(true); setModoCorretor(false); setLoginRole('usuario'); setIsSignUp(false); }} 
+              style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.5rem 1rem', borderRadius: '4px', cursor: 'pointer', fontWeight: '500' }}
+            >
+              Acesso Proprietário
+            </button>
+          </div>
         )}
       </header>
 
-      {modoCorretor && !corretorLogado ? (
-        /* Tela de Login */
+      {((modoCorretor && !corretorLogado) || (modoUsuario && !usuarioLogado)) ? (
+        /* Tela de Login / Inscrição Unificada */
         <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
           <div style={{ backgroundColor: 'var(--surface)', padding: '2.5rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%', maxWidth: '400px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1.5rem', color: 'var(--primary)' }}>
               <Lock size={40} />
             </div>
-            <h2 style={{ fontSize: '1.5rem', textAlign: 'center', marginBottom: '0.5rem', color: 'var(--text)' }}>Acesso do Corretor</h2>
-            <p style={{ textLight: 'center', color: 'var(--text-light)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '1.5rem' }}>
-              Faça login para gerenciar imóveis e leads.
-            </p>
+            
+            {isSignUp ? (
+              <>
+                <h2 style={{ fontSize: '1.5rem', textAlign: 'center', marginBottom: '0.5rem', color: 'var(--text)' }}>Criar Nova Conta</h2>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+                  Cadastre-se no portal Antropia Imóveis.
+                </p>
 
-            {loginErro && (
-              <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
-                {loginErro}
-              </div>
+                {loginErro && (
+                  <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
+                    {loginErro}
+                  </div>
+                )}
+
+                <form onSubmit={handleSignUp} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Perfil da Conta</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => setSignupRole('usuario')}
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: signupRole === 'usuario' ? 'var(--primary)' : '#fff', color: signupRole === 'usuario' ? '#fff' : 'var(--text)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+                      >
+                        Proprietário/Cliente
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => setSignupRole('corretor')}
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: signupRole === 'corretor' ? 'var(--primary)' : '#fff', color: signupRole === 'corretor' ? '#fff' : 'var(--text)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+                      >
+                        Corretor Parceiro
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Nome Completo</label>
+                    <input 
+                      type="text" 
+                      required 
+                      value={signupNome}
+                      onChange={e => setSignupNome(e.target.value)}
+                      placeholder="Ex: Pedro de Souza"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>E-mail</label>
+                    <input 
+                      type="email" 
+                      required 
+                      value={signupEmail}
+                      onChange={e => setSignupEmail(e.target.value)}
+                      placeholder="Ex: pedro@gmail.com"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Senha</label>
+                    <input 
+                      type="password" 
+                      required 
+                      value={signupSenha}
+                      onChange={e => setSignupSenha(e.target.value)}
+                      placeholder="Senha de acesso"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', textAlign: 'center' }}
+                  >
+                    Registrar Conta
+                  </button>
+                </form>
+
+                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-light)' }}>
+                  Já possui uma conta?{' '}
+                  <button onClick={() => { setIsSignUp(false); setLoginErro(''); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}>
+                    Faça Login
+                  </button>
+                </p>
+              </>
+            ) : (
+              <>
+                <h2 style={{ fontSize: '1.5rem', textAlign: 'center', marginBottom: '0.5rem', color: 'var(--text)' }}>
+                  {loginRole === 'corretor' ? 'Acesso do Corretor' : 'Acesso do Proprietário'}
+                </h2>
+                <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+                  Faça login para gerenciar imóveis e leads.
+                </p>
+
+                {loginErro && (
+                  <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>
+                    {loginErro}
+                  </div>
+                )}
+
+                <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Tipo de Acesso</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => { setLoginRole('usuario'); setModoUsuario(true); setModoCorretor(false); }}
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: loginRole === 'usuario' ? 'var(--primary)' : '#fff', color: loginRole === 'usuario' ? '#fff' : 'var(--text)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+                      >
+                        Proprietário
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => { setLoginRole('corretor'); setModoCorretor(true); setModoUsuario(false); }}
+                        style={{ flex: 1, padding: '0.5rem', borderRadius: '4px', border: '1px solid var(--border)', backgroundColor: loginRole === 'corretor' ? 'var(--primary)' : '#fff', color: loginRole === 'corretor' ? '#fff' : 'var(--text)', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.8rem' }}
+                      >
+                        Corretor
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>E-mail</label>
+                    <input 
+                      type="email" 
+                      required 
+                      value={loginEmail}
+                      onChange={e => setLoginEmail(e.target.value)}
+                      placeholder={loginRole === 'corretor' ? 'corretor@antropia.com' : 'usuario@antropia.com'}
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Senha de acesso</label>
+                    <input 
+                      type="password" 
+                      required 
+                      value={loginSenha}
+                      onChange={e => setLoginSenha(e.target.value)}
+                      placeholder="Sua senha secreta"
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
+                    />
+                  </div>
+                  <button 
+                    type="submit" 
+                    style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', textAlign: 'center' }}
+                  >
+                    Entrar no Painel
+                  </button>
+                </form>
+
+                <p style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-light)' }}>
+                  Ainda não tem cadastro?{' '}
+                  <button onClick={() => { setIsSignUp(true); setLoginErro(''); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', padding: 0 }}>
+                    Cadastre-se aqui
+                  </button>
+                </p>
+
+                <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-light)', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                  {loginRole === 'corretor' ? (
+                    <span>Dica portfólio: Use <strong>corretor@antropia.com</strong> e senha <strong>admin123</strong></span>
+                  ) : (
+                    <span>Dica portfólio: Use <strong>usuario@antropia.com</strong> e senha <strong>user123</strong></span>
+                  )}
+                </div>
+              </>
             )}
-
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>E-mail corporativo</label>
-                <input 
-                  type="email" 
-                  required 
-                  value={loginEmail}
-                  onChange={e => setLoginEmail(e.target.value)}
-                  placeholder="Ex: corretor@antropia.com"
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
-                />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Senha de acesso</label>
-                <input 
-                  type="password" 
-                  required 
-                  value={loginSenha}
-                  onChange={e => setLoginSenha(e.target.value)}
-                  placeholder="Sua senha secreta"
-                  style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }}
-                />
-              </div>
-              <button 
-                type="submit" 
-                style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', textAlign: 'center', transition: 'background-color 0.2s' }}
-              >
-                Entrar no Painel
-              </button>
-            </form>
-            <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-light)' }}>
-              Dica portfólio: Use <strong>corretor@antropia.com</strong> e senha <strong>admin123</strong>
-            </div>
           </div>
         </main>
       ) : modoCorretor && corretorLogado ? (
@@ -530,7 +738,7 @@ function App() {
                 
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500', marginBottom: '0.25rem' }}>Descrição do Imóvel</label>
-                  <textarea rows="4" value={imovelParaEditar ? editDescricao : novoDescricao} onChange={e => imovelParaEditar ? setEditDescricao(e.target.value) : setNovoDescricao(e.target.value)} placeholder="Detalhes sobre acabamento, diferenciais..." style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                  <textarea rows={4} value={imovelParaEditar ? editDescricao : novoDescricao} onChange={e => imovelParaEditar ? setEditDescricao(e.target.value) : setNovoDescricao(e.target.value)} placeholder="Detalhes sobre acabamento, diferenciais..." style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
                 </div>
 
                 <div>
@@ -587,7 +795,6 @@ function App() {
                   </div>
                 )}
 
-                {/* Upload de Imagem ou Link */}
                 <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '500' }}>Foto do Imóvel</label>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
@@ -655,7 +862,7 @@ function App() {
                         </td>
                         <td style={{ padding: '1rem', textAlign: 'right' }}>
                           <button onClick={() => iniciarEdicao(im)} style={{ backgroundColor: 'transparent', border: '1px solid var(--primary)', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer', marginRight: '0.5rem', fontSize: '0.85rem' }}>Editar</button>
-                          <button onClick={() => handleExcluirImovel(im.id)} style={{ backgroundColor: 'transparent', border: '1px solid #dc2626', color: '#dc2626', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>Excluir</button>
+                          {im.id && <button onClick={() => handleExcluirImovel(im.id!)} style={{ backgroundColor: 'transparent', border: '1px solid #dc2626', color: '#dc2626', padding: '0.25rem 0.75rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.85rem' }}>Excluir</button>}
                         </td>
                       </tr>
                     ))}
@@ -726,12 +933,12 @@ function App() {
                             
                             <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
                               <button onClick={() => iniciarEdicaoLead(lead)} style={{ flex: 1, backgroundColor: '#e2e8f0', border: 'none', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Editar</button>
-                              <button onClick={() => handleExcluirLead(lead.id)} style={{ flex: 1, backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Excluir</button>
+                              {lead.id && <button onClick={() => handleExcluirLead(lead.id!)} style={{ flex: 1, backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Excluir</button>}
                             </div>
 
                             <select 
                               value={lead.status_funil} 
-                              onChange={e => handleMudarStatusLead(lead.id, e.target.value)}
+                              onChange={e => lead.id && handleMudarStatusLead(lead.id, e.target.value)}
                               style={{ width: '100%', padding: '0.25rem', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '0.75rem', outline: 'none', backgroundColor: '#fff', cursor: 'pointer' }}
                             >
                               {STATUS_COLUNAS.map(s => <option key={s} value={s}>{s}</option>)}
@@ -764,7 +971,7 @@ function App() {
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Mensagem/Observação</label>
-                        <textarea rows="3" required value={leadFormMensagem} onChange={e => setLeadFormMensagem(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                        <textarea rows={3} required value={leadFormMensagem} onChange={e => setLeadFormMensagem(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
                       </div>
                       <div>
                         <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Status do Funil</label>
@@ -778,6 +985,177 @@ function App() {
                       </div>
                     </form>
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+        </main>
+      ) : modoUsuario && usuarioLogado ? (
+        /* Painel do Proprietário */
+        <main style={{ flex: 1, padding: '2rem', width: '100%' }}>
+          <div style={{ display: 'flex', gap: '2rem', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem', maxWidth: '1200px', margin: '0 auto 2rem auto' }}>
+            <button 
+              onClick={() => { setAbaAtiva('usuario-imoveis'); setImovelParaEditar(null); }} 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', backgroundColor: 'transparent', fontSize: '1.1rem', cursor: 'pointer', paddingBottom: '0.5rem', color: abaAtiva === 'usuario-imoveis' || (abaAtiva === 'cadastrar' && imovelParaEditar) ? 'var(--primary)' : 'var(--text-light)', borderBottom: abaAtiva === 'usuario-imoveis' || (abaAtiva === 'cadastrar' && imovelParaEditar) ? '2px solid var(--primary)' : 'none', fontWeight: abaAtiva === 'usuario-imoveis' || (abaAtiva === 'cadastrar' && imovelParaEditar) ? 'bold' : 'normal' }}
+            >
+              <Search size={20} />
+              Meus Imóveis Cadastrados
+            </button>
+            <button 
+              onClick={() => { setAbaAtiva('cadastrar'); setImovelParaEditar(null); setCorretorPreferidoId(''); }} 
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', border: 'none', backgroundColor: 'transparent', fontSize: '1.1rem', cursor: 'pointer', paddingBottom: '0.5rem', color: abaAtiva === 'cadastrar' && !imovelParaEditar ? 'var(--primary)' : 'var(--text-light)', borderBottom: abaAtiva === 'cadastrar' && !imovelParaEditar ? '2px solid var(--primary)' : 'none', fontWeight: abaAtiva === 'cadastrar' && !imovelParaEditar ? 'bold' : 'normal' }}
+            >
+              <PlusCircle size={20} />
+              Anunciar Novo Imóvel
+            </button>
+          </div>
+
+          {abaAtiva === 'cadastrar' ? (
+            /* Formulário de Cadastro/Edição de Imóvel para Proprietário */
+            <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', maxWidth: '800px', margin: '0 auto' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>{imovelParaEditar ? 'Editar Imóvel' : 'Anunciar Novo Imóvel'}</h3>
+
+              {cadastroSucesso && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#ecfdf5', color: '#047857', padding: '1rem', borderRadius: '6px', marginBottom: '1.5rem' }}>
+                  <CheckCircle size={20} />
+                  <span>Imóvel registrado com sucesso!</span>
+                </div>
+              )}
+
+              <form onSubmit={imovelParaEditar ? handleSalvarEdicao : handleCadastrarImovel} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Título do Anúncio</label>
+                    <input type="text" required value={imovelParaEditar ? editTitulo : novoTitulo} onChange={e => imovelParaEditar ? setEditTitulo(e.target.value) : setNovoTitulo(e.target.value)} placeholder="Ex: Casa aconchegante com jardim" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Preço (R$)</label>
+                    <input type="number" required value={imovelParaEditar ? editPreco : novoPreco} onChange={e => imovelParaEditar ? setEditPreco(e.target.value) : setNovoPreco(e.target.value)} placeholder="Ex: 350000" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Descrição do Imóvel</label>
+                  <textarea rows={3} value={imovelParaEditar ? editDescricao : novoDescricao} onChange={e => imovelParaEditar ? setEditDescricao(e.target.value) : setNovoDescricao(e.target.value)} placeholder="Detalhes sobre localização, diferenciais..." style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Quartos</label>
+                    <input type="number" required value={imovelParaEditar ? editQuartos : novoQuartos} onChange={e => imovelParaEditar ? setEditQuartos(e.target.value) : setNovoQuartos(e.target.value)} placeholder="0" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Banheiros</label>
+                    <input type="number" required value={imovelParaEditar ? editBanheiros : novoBanheiros} onChange={e => imovelParaEditar ? setEditBanheiros(e.target.value) : setNovoBanheiros(e.target.value)} placeholder="0" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Vagas de Garagem</label>
+                    <input type="number" value={imovelParaEditar ? editVagas : novoVagas} onChange={e => imovelParaEditar ? setEditVagas(e.target.value) : setNovoVagas(e.target.value)} placeholder="0" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Área Útil (m²)</label>
+                    <input type="number" required value={imovelParaEditar ? editArea : novoArea} onChange={e => imovelParaEditar ? setEditArea(e.target.value) : setNovoArea(e.target.value)} placeholder="Ex: 120" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Tipo</label>
+                    <select value={imovelParaEditar ? editTipo : novoTipo} onChange={e => imovelParaEditar ? setEditTipo(e.target.value) : setNovoTipo(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', backgroundColor: '#fff' }}>
+                      <option value="Casa">Casa</option>
+                      <option value="Apartamento">Apartamento</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Cidade</label>
+                    <input type="text" required value={imovelParaEditar ? editCidade : novoCidade} onChange={e => imovelParaEditar ? setEditCidade(e.target.value) : setNovoCidade(e.target.value)} placeholder="Ex: Campinas" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Bairro</label>
+                    <input type="text" required value={imovelParaEditar ? editBairro : novoBairro} onChange={e => imovelParaEditar ? setEditBairro(e.target.value) : setNovoBairro(e.target.value)} placeholder="Ex: Centro" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                  </div>
+                </div>
+
+                {!imovelParaEditar && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.25rem', color: 'var(--primary)', fontWeight: 'bold' }}>Indicar Corretor de Preferência (Opcional)</label>
+                    <select 
+                      value={corretorPreferidoId} 
+                      onChange={e => setCorretorPreferidoId(e.target.value)} 
+                      style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--primary)', outline: 'none', backgroundColor: '#fff' }}
+                    >
+                      <option value="">Nenhum (Qualquer corretor disponível)</option>
+                      {corretores.map(c => (
+                        <option key={c.id} value={c.id}>{c.nome} ({c.email})</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Foto do Imóvel</label>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', backgroundColor: '#e2e8f0', color: 'var(--text)', padding: '0.75rem 1.5rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                      <Upload size={18} />
+                      Escolher Foto
+                      <input type="file" accept="image/*" onChange={imovelParaEditar ? handleUploadLocalEdicao : handleUploadLocal} style={{ display: 'none' }} />
+                    </label>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>
+                      {(imovelParaEditar ? editImagemUrl : novoImagemUrl) ? '✓ Foto carregada com sucesso' : 'Nenhuma imagem selecionada (será usada imagem padrão)'}
+                    </span>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1.5rem' }}>
+                  <button type="button" onClick={() => setAbaAtiva('usuario-imoveis')} style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.75rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                  <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem 2rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    {imovelParaEditar ? 'Salvar Edição' : 'Publicar Imóvel'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            /* Listagem de Imóveis do Usuário Proprietário */
+            <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--text)' }}>Seus Imóveis Registrados</h3>
+              
+              {imoveis.filter(im => im.usuario_id === usuarioLogado.id).length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+                  <p style={{ color: 'var(--text-light)', marginBottom: '1.5rem' }}>Você ainda não cadastrou nenhum imóvel no portal.</p>
+                  <button onClick={() => setAbaAtiva('cadastrar')} style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+                    Cadastrar Meu Primeiro Imóvel
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
+                  {imoveis.filter(im => im.usuario_id === usuarioLogado.id).map(imovel => {
+                    const corr = corretores.find(c => c.id === imovel.corretor_preferido_id);
+                    return (
+                      <div key={imovel.id} style={{ backgroundColor: 'var(--surface)', borderRadius: '12px', border: '1px solid var(--border)', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 12px rgba(0,0,0,0.02)' }}>
+                        <img src={imovel.imagem_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'} alt={imovel.titulo} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                        <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                          <h4 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text)' }}>{imovel.titulo}</h4>
+                          <div style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+                            {imovel.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                          </div>
+                          <p style={{ fontSize: '0.85rem', color: 'var(--text-light)', marginBottom: '1rem' }}>{imovel.bairro}, {imovel.cidade}</p>
+
+                          {corr && (
+                            <div style={{ fontSize: '0.8rem', backgroundColor: '#eff6ff', color: '#1e40af', padding: '0.5rem 0.75rem', borderRadius: '6px', marginBottom: '1rem' }}>
+                              Corretor indicado: <strong>{corr.nome}</strong>
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', gap: '1rem', marginTop: 'auto' }}>
+                            <button onClick={() => iniciarEdicao(imovel)} style={{ flex: 1, backgroundColor: '#e2e8f0', color: 'var(--text)', border: 'none', padding: '0.6rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Editar</button>
+                            {imovel.id && <button onClick={() => handleExcluirImovel(imovel.id!)} style={{ flex: 1, backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', padding: '0.6rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Excluir</button>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -861,7 +1239,7 @@ function App() {
                     <input type="tel" required placeholder="(15) 99999-9999" value={leadTelefone} onChange={e => setLeadTelefone(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
                   </div>
                   <div>
-                    <textarea rows="4" required placeholder="Sua mensagem" value={leadMensagem} onChange={e => setLeadMensagem(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                    <textarea rows={4} required placeholder="Sua mensagem" value={leadMensagem} onChange={e => setLeadMensagem(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
                   </div>
                   <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
                     <Send size={16} />

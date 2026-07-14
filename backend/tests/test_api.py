@@ -124,3 +124,24 @@ def test_fluxo_leads():
     response = client.delete(f"/api/leads/{lead_id}")
     assert response.status_code == 200
     assert response.json()["status"] == "success"
+
+def test_fluxo_usuario_proprietario():
+    # 1. Cadastro de Usuário Proprietário
+    response = client.post(
+        "/api/usuarios/",
+        json={"nome": "Proprietario Teste", "email": "proprietario@antropia.com", "senha": "user123"}
+    )
+    assert response.status_code == 201
+    user_id = response.json()["id"]
+
+    # 2. Login de Usuário Proprietário
+    response = client.post(
+        "/api/login/usuario/",
+        json={"nome": "Temp", "email": "proprietario@antropia.com", "senha": "user123"}
+    )
+    assert response.status_code == 200
+    assert response.json()["nome"] == "Proprietario Teste"
+
+    # 3. Listagem de Corretores
+    response = client.get("/api/corretores/")
+    assert response.status_code == 200

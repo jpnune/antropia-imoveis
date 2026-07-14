@@ -16,6 +16,19 @@ class CorretorResponse(CorretorBase):
     class Config:
         from_attributes = True
 
+# Schemas para Usuário (Proprietário)
+class UsuarioBase(BaseModel):
+    nome: str
+    email: EmailStr
+
+class UsuarioCreate(UsuarioBase):
+    senha: str
+
+class UsuarioResponse(UsuarioBase):
+    id: int
+    class Config:
+        from_attributes = True
+
 # Schemas para Imóvel
 class ImovelBase(BaseModel):
     titulo: str
@@ -30,6 +43,8 @@ class ImovelBase(BaseModel):
     bairro: Optional[str] = None
     status: Optional[str] = 'Disponivel'
     imagem_url: Optional[str] = None
+    usuario_id: Optional[int] = None
+    corretor_preferido_id: Optional[int] = None
 
 class ImovelCreate(ImovelBase):
     pass
