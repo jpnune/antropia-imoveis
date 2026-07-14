@@ -10,6 +10,8 @@ function App() {
   const [estatisticas, setEstatisticas] = useState([]);
   const [busca, setBusca] = useState('');
   const [tipo, setTipo] = useState('');
+  const [maxPreco, setMaxPreco] = useState('');
+  const [minQuartos, setMinQuartos] = useState('');
   const [imovelSelecionado, setImovelSelecionado] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -58,6 +60,16 @@ function App() {
   const [editBairro, setEditBairro] = useState('');
   const [editImagemUrl, setEditImagemUrl] = useState('');
   const [editStatus, setEditStatus] = useState('Disponivel');
+
+  // Estados de Gerenciamento de Leads (CRUD)
+  const [leadParaEditar, setLeadParaEditar] = useState(null);
+  const [abrirModalLead, setAbrirModalLead] = useState(false);
+  const [leadFormNome, setLeadFormNome] = useState('');
+  const [leadFormEmail, setLeadFormEmail] = useState('');
+  const [leadFormTelefone, setLeadFormTelefone] = useState('');
+  const [leadFormMensagem, setLeadFormMensagem] = useState('');
+  const [leadFormStatus, setLeadFormStatus] = useState('Novo');
+
 
 
   // Upload Local de Imagem
@@ -120,7 +132,9 @@ function App() {
                        imovel.bairro.toLowerCase().includes(busca.toLowerCase()) ||
                        imovel.cidade.toLowerCase().includes(busca.toLowerCase());
     const matchTipo = tipo === '' || imovel.tipo === tipo;
-    return matchBusca && matchTipo;
+    const matchPreco = maxPreco === '' || imovel.preco <= parseFloat(maxPreco);
+    const matchQuartos = minQuartos === '' || imovel.quartos >= minQuartos;
+    return matchBusca && matchTipo && matchPreco && matchQuartos;
   });
 
   const handleEnviarLead = async (e) => {
@@ -168,12 +182,77 @@ function App() {
   };
 
   const handleMudarStatusLead = async (leadId, novoStatus) => {
-    setLeads(leads.map(lead => lead.id === leadId ? { ...lead, status_funil: novoStatus } : lead));
+    const lead = leads.find(l => l.id === leadId);
+    if (!lead) return;
+    const updatedLead = { ...lead, status_funil: novoStatus };
+    setLeads(leads.map(l => l.id === leadId ? updatedLead : l));
     try {
-      await api.atualizarStatusLead(leadId, novoStatus);
+      await api.atualizarLead(leadId, updatedLead);
     } catch (err) {
-      console.error('Falha ao atualizar status no servidor, revertendo...', err);
+      console.error('Falha ao atualizar status no servidor', err);
     }
+  };
+
+  const iniciarCriacaoLead = () => {
+    setLeadParaEditar(null);
+    setLeadFormNome('');
+    setLeadFormEmail('');
+    setLeadFormTelefone('');
+    setLeadFormMensagem('Interesse manual adicionado pelo corretor.');
+    setLeadFormStatus('Novo');
+    setAbrirModalLead(true);
+  };
+
+  const iniciarEdicaoLead = (lead) => {
+    setLeadParaEditar(lead);
+    setLeadFormNome(lead.nome);
+    setLeadFormEmail(lead.email);
+    setLeadFormTelefone(lead.telefone);
+    setLeadFormMensagem(lead.mensagem);
+    setLeadFormStatus(lead.status_funil);
+    setAbrirModalLead(true);
+  };
+
+  const handleExcluirLead = async (id) => {
+    if (window.confirm('Deseja realmente remover este lead?')) {
+      setLeads(leads.filter(l => l.id !== id));
+      try {
+        await api.excluirLead(id);
+      } catch (err) {
+        console.error('Erro ao remover lead no servidor:', err);
+      }
+    }
+  };
+
+  const handleSalvarLead = async (e) => {
+    e.preventDefault();
+    const payload = {
+      nome: leadFormNome,
+      email: leadFormEmail,
+      telefone: leadFormTelefone,
+      mensagem: leadFormMensagem,
+      status_funil: leadFormStatus
+    };
+
+    if (leadParaEditar) {
+      // Editar
+      setLeads(leads.map(l => l.id === leadParaEditar.id ? { ...l, ...payload } : l));
+      try {
+        await api.atualizarLead(leadParaEditar.id, payload);
+      } catch (err) {
+        console.error('Erro ao editar lead no servidor:', err);
+      }
+    } else {
+      // Criar
+      const mockLead = { ...payload, id: Date.now(), criado_em: new Date().toISOString() };
+      setLeads([...leads, mockLead]);
+      try {
+        await api.enviarLead(payload);
+      } catch (err) {
+        console.error('Erro ao salvar lead no servidor:', err);
+      }
+    }
+    setAbrirModalLead(false);
   };
 
   const handleCadastrarImovel = async (e) => {
@@ -616,7 +695,16 @@ function App() {
           ) : (
             /* Quadro Kanban (CRM) */
             <div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', textAlign: 'center', color: 'var(--text)' }}>Funil de Vendas - CRM</h3>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', maxWidth: '1200px', margin: '0 auto 1.5rem auto' }}>
+                <h3 style={{ fontSize: '1.5rem', color: 'var(--text)', margin: 0 }}>Funil de Vendas - CRM</h3>
+                <button 
+                  onClick={iniciarCriacaoLead}
+                  style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.6rem 1.2rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                >
+                  <PlusCircle size={18} />
+                  Novo Lead
+                </button>
+              </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', minHeight: '500px', alignItems: 'start' }}>
                 {STATUS_COLUNAS.map(status => {
@@ -632,9 +720,15 @@ function App() {
                         {leadsNaColuna.map(lead => (
                           <div key={lead.id} style={{ backgroundColor: '#f8fafc', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.75rem', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
                             <strong style={{ fontSize: '0.95rem', display: 'block', color: 'var(--text)' }}>{lead.nome}</strong>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', display: 'block', marginBottom: '0.5rem' }}>{lead.telefone}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', display: 'block' }}>{lead.telefone}</span>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-light)', display: 'block', marginBottom: '0.5rem' }}>{lead.email}</span>
                             <p style={{ fontSize: '0.8rem', color: 'var(--text)', marginBottom: '0.75rem', fontStyle: 'italic' }}>"{lead.mensagem}"</p>
                             
+                            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                              <button onClick={() => iniciarEdicaoLead(lead)} style={{ flex: 1, backgroundColor: '#e2e8f0', border: 'none', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Editar</button>
+                              <button onClick={() => handleExcluirLead(lead.id)} style={{ flex: 1, backgroundColor: '#fee2e2', color: '#dc2626', border: 'none', padding: '0.25rem', borderRadius: '4px', fontSize: '0.75rem', cursor: 'pointer' }}>Excluir</button>
+                            </div>
+
                             <select 
                               value={lead.status_funil} 
                               onChange={e => handleMudarStatusLead(lead.id, e.target.value)}
@@ -649,6 +743,43 @@ function App() {
                   );
                 })}
               </div>
+
+              {/* Modal de Lead (Adicionar/Editar) */}
+              {abrirModalLead && (
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(4px)' }}>
+                  <div style={{ backgroundColor: 'var(--surface)', padding: '2rem', borderRadius: '12px', border: '1px solid var(--border)', width: '100%', maxWidth: '500px', boxShadow: '0 10px 25px rgba(0,0,0,0.1)' }}>
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem' }}>{leadParaEditar ? 'Editar Lead' : 'Novo Lead'}</h3>
+                    <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Nome Completo</label>
+                        <input type="text" required value={leadFormNome} onChange={e => setLeadFormNome(e.target.value)} placeholder="Ex: João da Silva" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>E-mail</label>
+                        <input type="email" required value={leadFormEmail} onChange={e => setLeadFormEmail(e.target.value)} placeholder="Ex: joao@exemplo.com" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Telefone</label>
+                        <input type="text" required value={leadFormTelefone} onChange={e => setLeadFormTelefone(e.target.value)} placeholder="Ex: (15) 99999-9999" style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Mensagem/Observação</label>
+                        <textarea rows="3" required value={leadFormMensagem} onChange={e => setLeadFormMensagem(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', resize: 'none' }} />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.25rem' }}>Status do Funil</label>
+                        <select value={leadFormStatus} onChange={e => setLeadFormStatus(e.target.value)} style={{ width: '100%', padding: '0.75rem', borderRadius: '6px', border: '1px solid var(--border)', outline: 'none', backgroundColor: '#fff' }}>
+                          {STATUS_COLUNAS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
+                        <button type="button" onClick={() => setAbrirModalLead(false)} style={{ backgroundColor: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', padding: '0.75rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Cancelar</button>
+                        <button type="submit" style={{ backgroundColor: 'var(--primary)', color: '#fff', border: 'none', padding: '0.75rem 1.5rem', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>Salvar Lead</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </main>
@@ -744,80 +875,147 @@ function App() {
       ) : (
         /* Catálogo Geral (Busca de Imóveis) */
         <>
-          <section style={{ backgroundColor: 'var(--primary)', padding: '4rem 2rem', color: '#fff', textAlign: 'center' }}>
-            <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: '700' }}>Encontre o imóvel dos seus sonhos</h2>
-            <p style={{ marginBottom: '2rem', opacity: 0.9 }}>As melhores oportunidades da região com atendimento diferenciado.</p>
-            
-            <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: 'var(--surface)', padding: '0.5rem', borderRadius: '8px', display: 'flex', gap: '0.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', flex: 1, padding: '0 0.5rem', gap: '0.5rem' }}>
-                <Search size={20} color="var(--text-light)" />
-                <input 
-                  type="text" 
-                  placeholder="Busque por bairro, cidade ou palavra-chave..." 
-                  value={busca}
-                  onChange={e => setBusca(e.target.value)}
-                  style={{ width: '100%', border: 'none', outline: 'none', fontSize: '1rem', color: 'var(--text)' }}
-                />
-              </div>
-              <select 
-                value={tipo} 
-                onChange={e => setTipo(e.target.value)}
-                style={{ padding: '0.5rem 1rem', border: '1px solid var(--border)', borderRadius: '4px', outline: 'none', backgroundColor: '#fff', cursor: 'pointer' }}
-              >
-                <option value="">Todos os Tipos</option>
-                <option value="Casa">Casa</option>
-                <option value="Apartamento">Apartamento</option>
-              </select>
-            </div>
+          <section style={{ backgroundColor: 'var(--primary)', padding: '3rem 2rem', color: '#fff', textAlign: 'center' }}>
+            <h2 style={{ fontSize: '2.25rem', marginBottom: '0.5rem', fontWeight: '700' }}>Encontre o imóvel dos seus sonhos</h2>
+            <p style={{ opacity: 0.9 }}>As melhores oportunidades da região com atendimento diferenciado.</p>
           </section>
 
-          <main style={{ flex: 1, padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
-            <h3 style={{ fontSize: '1.75rem', marginBottom: '2rem', color: 'var(--text)' }}>Imóveis em Destaque</h3>
-            
-            {loading ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-light)' }}>Carregando imóveis...</p>
-            ) : filtrados.length === 0 ? (
-              <p style={{ textAlign: 'center', color: 'var(--text-light)' }}>Nenhum imóvel encontrado.</p>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '2rem' }}>
-                {filtrados.map(imovel => (
-                  <div 
-                    key={imovel.id} 
-                    onClick={() => abrirDetalhes(imovel)}
-                    style={{ backgroundColor: 'var(--surface)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s' }}
-                    onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-                    onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+          <main style={{ flex: 1, padding: '3rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%', display: 'grid', gridTemplateColumns: '280px 1fr', gap: '2rem', alignItems: 'start' }}>
+            {/* Sidebar de Filtros (Aside Esquerdo) */}
+            <aside style={{ backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', position: 'sticky', top: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 'bold', marginBottom: '1.5rem', color: 'var(--text)' }}>Filtrar Imóveis</h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text)' }}>Busca rápida</label>
+                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.5rem', backgroundColor: '#fff' }}>
+                    <Search size={18} color="var(--text-light)" style={{ marginRight: '0.25rem' }} />
+                    <input 
+                      type="text" 
+                      placeholder="Cidade, bairro..." 
+                      value={busca}
+                      onChange={e => setBusca(e.target.value)}
+                      style={{ width: '100%', border: 'none', outline: 'none', fontSize: '0.9rem' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text)' }}>Tipo de imóvel</label>
+                  <select 
+                    value={tipo} 
+                    onChange={e => setTipo(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none', backgroundColor: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
                   >
-                    <img src={imovel.imagem_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'} alt={imovel.titulo} style={{ width: '100%', height: '220px', objectFit: 'cover' }} />
-                    <div style={{ padding: '1.5rem' }}>
-                      <div style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.25rem', marginBottom: '0.5rem' }}>
-                        {imovel.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                      </div>
-                      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '600' }}>{imovel.titulo}</h4>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-light)', fontSize: '0.9rem', marginBottom: '1rem' }}>
-                        <MapPin size={16} />
-                        <span>{imovel.bairro}, {imovel.cidade}</span>
-                      </div>
-                      
-                      <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '1rem', color: 'var(--text-light)', fontSize: '0.85rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <BedDouble size={16} />
-                          <span>{imovel.quartos} Quartos</span>
+                    <option value="">Todos os Tipos</option>
+                    <option value="Casa">Casa</option>
+                    <option value="Apartamento">Apartamento</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text)' }}>Preço máximo</label>
+                  <select 
+                    value={maxPreco} 
+                    onChange={e => setMaxPreco(e.target.value)}
+                    style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '6px', outline: 'none', backgroundColor: '#fff', cursor: 'pointer', fontSize: '0.9rem' }}
+                  >
+                    <option value="">Qualquer preço</option>
+                    <option value="300000">Até R$ 300.000</option>
+                    <option value="500000">Até R$ 500.000</option>
+                    <option value="1000000">Até R$ 1.000.000</option>
+                    <option value="2000000">Até R$ 2.000.000</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text)' }}>Mínimo de quartos</label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {['', '1', '2', '3'].map(q => {
+                      const isActive = (q === '' && minQuartos === '') || (parseInt(q) === minQuartos);
+                      return (
+                        <button
+                          key={q || 'any'}
+                          type="button"
+                          onClick={() => setMinQuartos(q === '' ? '' : parseInt(q))}
+                          style={{
+                            flex: 1,
+                            padding: '0.4rem',
+                            borderRadius: '6px',
+                            border: '1px solid var(--border)',
+                            backgroundColor: isActive ? 'var(--primary)' : '#fff',
+                            color: isActive ? '#fff' : 'var(--text)',
+                            fontWeight: 'bold',
+                            cursor: 'pointer',
+                            fontSize: '0.85rem'
+                          }}
+                        >
+                          {q === '' ? 'Tds' : `${q}+`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => { setBusca(''); setTipo(''); setMaxPreco(''); setMinQuartos(''); }}
+                  style={{ width: '100%', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: '6px', backgroundColor: 'transparent', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-light)', fontWeight: '500' }}
+                >
+                  Limpar Filtros
+                </button>
+              </div>
+            </aside>
+
+            {/* Grid de Imóveis à direita */}
+            <div>
+              <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', color: 'var(--text)' }}>Imóveis em Destaque</h3>
+              
+              {loading ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-light)' }}>Carregando imóveis...</p>
+              ) : filtrados.length === 0 ? (
+                <p style={{ textAlign: 'center', color: 'var(--text-light)' }}>Nenhum imóvel encontrado.</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1.5rem' }}>
+                  {filtrados.map(imovel => (
+                    <div 
+                      key={imovel.id} 
+                      onClick={() => abrirDetalhes(imovel)}
+                      style={{ backgroundColor: 'var(--surface)', borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', cursor: 'pointer', transition: 'transform 0.2s' }}
+                      onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+                      onMouseLeave={e => e.currentTarget.style.transform = 'none'}
+                    >
+                      <img src={imovel.imagem_url || 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80'} alt={imovel.titulo} style={{ width: '100%', height: '200px', objectFit: 'cover' }} />
+                      <div style={{ padding: '1.25rem' }}>
+                        <div style={{ color: 'var(--primary)', fontWeight: 'bold', fontSize: '1.2rem', marginBottom: '0.5rem' }}>
+                          {imovel.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Bath size={16} />
-                          <span>{imovel.banheiros} Banheiros</span>
+                        <h4 style={{ fontSize: '1rem', marginBottom: '0.5rem', color: 'var(--text)', fontWeight: '600' }}>{imovel.titulo}</h4>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--text-light)', fontSize: '0.85rem', marginBottom: '1rem' }}>
+                          <MapPin size={14} />
+                          <span>{imovel.bairro}, {imovel.cidade}</span>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                          <Maximize size={16} />
-                          <span>{imovel.area} m²</span>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', color: 'var(--text-light)', fontSize: '0.8rem' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <BedDouble size={14} />
+                            <span>{imovel.quartos} Qts</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Bath size={14} />
+                            <span>{imovel.banheiros} Banh</span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <Maximize size={14} />
+                            <span>{imovel.area} m²</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </main>
         </>
       )}

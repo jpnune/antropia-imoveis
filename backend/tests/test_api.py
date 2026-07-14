@@ -112,7 +112,15 @@ def test_fluxo_leads():
     assert response.status_code == 200
     assert len(response.json()) >= 1
 
-    # 3. Altera Status do Lead
-    response = client.put(f"/api/leads/{lead_id}?status_funil=Contatado")
+    # 3. Altera Dados do Lead (PUT)
+    payload["status_funil"] = "Contatado"
+    payload["nome"] = "Cliente Interessado Atualizado"
+    response = client.put(f"/api/leads/{lead_id}", json=payload)
     assert response.status_code == 200
     assert response.json()["status_funil"] == "Contatado"
+    assert response.json()["nome"] == "Cliente Interessado Atualizado"
+
+    # 4. Deleta Lead (DELETE)
+    response = client.delete(f"/api/leads/{lead_id}")
+    assert response.status_code == 200
+    assert response.json()["status"] == "success"

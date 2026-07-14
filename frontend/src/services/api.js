@@ -43,11 +43,20 @@ export const api = {
         if (!response.ok) throw new Error('Erro ao buscar leads');
         return response.json();
     },
-    async atualizarStatusLead(id, status_funil) {
-        const response = await fetch(`${API_URL}/leads/${id}?status_funil=${encodeURIComponent(status_funil)}`, {
-            method: 'PUT'
+    async atualizarLead(id, lead) {
+        const response = await fetch(`${API_URL}/leads/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(lead)
         });
-        if (!response.ok) throw new Error('Erro ao atualizar status do lead');
+        if (!response.ok) throw new Error('Erro ao atualizar lead');
+        return response.json();
+    },
+    async excluirLead(id) {
+        const response = await fetch(`${API_URL}/leads/${id}`, {
+            method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Erro ao excluir lead');
         return response.json();
     },
     async registrarVisita(imovelId) {

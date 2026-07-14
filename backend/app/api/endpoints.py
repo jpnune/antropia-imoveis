@@ -41,14 +41,25 @@ def list_leads(db: Session = Depends(get_db)):
     return db.query(models.Lead).all()
 
 @router.put('/leads/{lead_id}', response_model=schemas.LeadResponse)
-def update_lead_status(lead_id: int, status_funil: str, db: Session = Depends(get_db)):
+def update_lead(lead_id: int, lead_update: schemas.LeadCreate, db: Session = Depends(get_db)):
     db_lead = db.query(models.Lead).filter(models.Lead.id == lead_id).first()
     if not db_lead:
         raise HTTPException(status_code=404, detail='Lead nao encontrado')
-    db_lead.status_funil = status_funil
+    for key, value in lead_update.model_dump().items():
+        setattr(db_lead, key, value)
     db.commit()
     db.refresh(db_lead)
     return db_lead
+
+@router.delete('/leads/{lead_id}', status_code=status.HTTP_200_OK)
+def delete_lead(lead_id: int, db: Session = Depends(get_db)):
+    db_lead = db.query(models.Lead).filter(models.Lead.id == lead_id).first()
+    if not db_lead:
+        raise HTTPException(status_code=404, detail='Lead nao encontrado')
+    db.delete(db_lead)
+    db.commit()
+    return {'status': 'success', 'message': 'Lead removido com sucesso'}
+
 
 # --- ENDPOINTS DE AUTENTICAÇÃO SIMPLIFICADA (CORRETOR) ---
 import bcrypt
